@@ -143,8 +143,6 @@ export class DlmmProcessor {
             let reserveYAmount = 0n
 
             const createAccounts = decodeSystemCreateAccounts(ins)
-            const transfers = decodeTokenTransfers(ins)
-            const transferChecks = decodeTokenTransfersChecked(ins)
             for (const createAccount of createAccounts) {
                 if (createAccount.owner === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
                     if (createAccount.newAccount === reserveX) {
@@ -175,10 +173,6 @@ export class DlmmProcessor {
                 data.activeId
             )
 
-            if (poolAddress === 'Es2vtGnR5afH3LQMPVeuZwFzj4HmQK4RezUVLoykom4G')
-            {
-                console.log({basePool: basePool, createAccounts: createAccounts, decoded: decoded, transfers: transfers, transferChecks: transferChecks})
-            }
         } catch (e) {
             console.error(`Error in handleInitializePool: ${e}`)
         }
