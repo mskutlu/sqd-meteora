@@ -6,7 +6,6 @@ import * as dlmm from './abi/dlmm'
 import { DammProcessor } from './damm/processor'
 import { DlmmProcessor } from './dlmm/processor'
 import {run} from '@subsquid/batch-processor'
-import {decodeTokenTransfers, decodeTokenTransfersChecked, getAccountByIndex, writeLayoutLog, writeLog} from "./utils";
 
 const database = new TypeormDatabase()
 
@@ -20,8 +19,6 @@ const dataSource = new DataSourceBuilder()
         strideConcurrency: 10
     })
     .setBlockRange({from: 259_984_950})
-    // .setBlockRange({from: 290987855, to: 290997876})
-    // .setBlockRange({from: 269893072, to: 276165841})
     .setFields({
         block: { // block header fields
             timestamp: true
@@ -44,17 +41,6 @@ const dataSource = new DataSourceBuilder()
     .addInstruction({
       where: {
         programId: [damm.programId],
-        // d8: [
-        //   // damm.instructions.initializePermissionedPool.d8,
-        //   // damm.instructions.initializePermissionlessPool.d8,
-        //   //   damm.instructions.initializeCustomizablePermissionlessConstantProductPool.d8,
-        //   //   damm.instructions.initializePermissionlessConstantProductPoolWithConfig.d8,
-        //   //   damm.instructions.initializePermissionlessPoolWithFeeTier.d8,
-        //   // damm.instructions.swap.d8,
-        //   // damm.instructions.addBalanceLiquidity.d8,
-        //   // damm.instructions.removeBalanceLiquidity.d8,
-        //   // damm.instructions.setPoolFees.d8
-        // ],
         isCommitted: true
       },
       include: {
@@ -84,37 +70,17 @@ run(dataSource, database, async ctx => {
   for (let block of blocks) {
     for (let ins of block.instructions) {
       try {
-        const poolAddress = getAccountByIndex(ins.accounts, 0)
-        // if (poolAddress.toLowerCase() === 'Es2vtGnR5afH3LQMPVeuZwFzj4HmQK4RezUVLoykom4G'.toLowerCase()) {
-        // Process DAMM instructions
+          // Process DAMM instructions
           if (ins.programId === damm.programId) {
-              const transfers = decodeTokenTransfers(ins)
-              writeLayoutLog('damm', ins.d8, {ins: ins, transfers: transfers, inner: ins.inner})
-
                await dammProcessor.processInstruction(ins, block.header.timestamp)
           }
           // Process DLMM instructions
           if (ins.programId === dlmm.programId) {
-              const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-              if (layout) {
-                  const decoded = layout.decode({
-                      data: ins.data,
-                      accounts: ins.accounts
-                  })
-                  const transfers = decodeTokenTransfersChecked(ins)
-                  writeLayoutLog('dlmm', ins.d8, {block: block, ins: ins, transfers: transfers, inner: ins.inner, decoded: decoded})
-              }
               await dlmmProcessor.processInstruction(ins, block.header.timestamp)
           }
 
-          // }
       } catch (error: any) {
-          const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-          // @ts-ignore
-          const decoded = layout.decode({
-              data: ins.data,
-              accounts: ins.accounts
-          })
+
       }
     }
   }
