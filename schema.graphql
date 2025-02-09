@@ -1,0 +1,158 @@
+# Common types
+type BasePool @entity {
+  id: ID!
+  tokenX: String!
+  tokenY: String!
+  tokenXVault: String!
+  tokenYVault: String!
+  reserveX: BigInt!
+  reserveY: BigInt!
+  totalLiquidity: BigInt!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  status: Boolean! # enabled/disabled
+}
+
+# DAMM specific entities
+type DAMMPool @entity {
+  id: ID!
+  basePool: BasePool!
+  lpMint: String!
+  aVault: String!
+  bVault: String!
+  aVaultLpMint: String!
+  bVaultLpMint: String!
+  curveType: String!
+  positions: [DAMMLiquidityPosition!]! @derivedFrom(field: "pool")
+  swaps: [DAMMSwap!]! @derivedFrom(field: "pool")
+  fees: [DAMMFee!]! @derivedFrom(field: "pool")
+  locks: [DAMMLock!]! @derivedFrom(field: "pool")
+  liquidityChanges: [DAMMLiquidityChange!]! @derivedFrom(field: "pool")
+}
+
+type DAMMLiquidityPosition @entity {
+  id: ID!
+  pool: DAMMPool!
+  owner: String!
+  lpTokenAmount: BigInt!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DAMMLiquidityChange @entity {
+  id: ID!
+  pool: DAMMPool!
+  position: DAMMLiquidityPosition!
+  type: String! # add, remove, bootstrap, singleSide
+  tokenXAmount: BigInt!
+  tokenYAmount: BigInt!
+  lpTokenAmount: BigInt!
+  timestamp: DateTime!
+}
+
+type DAMMSwap @entity {
+  id: ID!
+  pool: DAMMPool!
+  userAddress: String!
+  tokenInMint: String!
+  tokenOutMint: String!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  timestamp: DateTime!
+}
+
+type DAMMFee @entity {
+  id: ID!
+  pool: DAMMPool!
+  owner: String!
+  tokenXAmount: BigInt!
+  tokenYAmount: BigInt!
+  timestamp: DateTime!
+}
+
+type DAMMLock @entity {
+  id: ID!
+  pool: DAMMPool!
+  owner: String!
+  amount: BigInt!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# DLMM specific entities
+type DLMMPool @entity {
+  id: ID!
+  basePool: BasePool!
+  binStep: Int!
+  activeId: Int!
+  activationPoint: BigInt
+  preActivationDuration: BigInt
+  preActivationSwapAddress: String
+  positions: [DLMMPosition!]! @derivedFrom(field: "pool")
+  swaps: [DLMMSwap!]! @derivedFrom(field: "pool")
+  liquidityChanges: [DLMMLiquidityChange!]! @derivedFrom(field: "pool")
+  rewards: [DLMMReward!]! @derivedFrom(field: "pool")
+  fees: [DlmmFee!]! @derivedFrom(field: "pool")
+}
+
+type DLMMPosition @entity {
+  id: ID!
+  pool: DLMMPool!
+  owner: String!
+  operator: String
+  lowerBinId: Int!
+  upperBinId: Int!
+  liquidity: BigInt!
+  tokenXAmount: BigInt!
+  tokenYAmount: BigInt!
+  feeOwner: String
+  lockReleasePoint: BigInt
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  liquidityChanges: [DLMMLiquidityChange!]! @derivedFrom(field: "position")
+}
+
+type DLMMSwap @entity {
+  id: ID!
+  pool: DLMMPool!
+  userAddress: String!
+  tokenInAddress: String!
+  tokenOutAddress: String!
+  amountIn: BigInt!
+  amountOut: BigInt!
+  priceImpactBps: Int
+  timestamp: DateTime!
+}
+
+type DLMMLiquidityChange @entity {
+  id: ID!
+  pool: DLMMPool!
+  position: DLMMPosition!
+  type: String! # add, remove, bootstrap, singleSide
+  tokenXAmount: BigInt!
+  tokenYAmount: BigInt!
+  timestamp: DateTime!
+}
+
+type DLMMReward @entity {
+  id: ID!
+  pool: DLMMPool!
+  rewardIndex: Int!
+  rewardDuration: BigInt!
+  funder: String!
+  amount: BigInt!
+  lastUpdateTime: DateTime!
+  createdAt: DateTime!
+}
+
+
+type DlmmFee @entity {
+  id: ID!
+  pool: DLMMPool!
+  position: String!
+  user: String!
+  amountX: BigInt!
+  amountY: BigInt!
+  type: String!
+  timestamp: Int!
+}
