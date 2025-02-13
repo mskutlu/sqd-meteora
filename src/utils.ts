@@ -218,6 +218,8 @@ export function decodeTokenTransfers(ins: Instruction) {
 
     for (const tokenIns of tokenInstructions) {
         try {
+            if (tokenIns.d1 !== tokenProgram.instructions.transfer.d1) 
+                continue;
             const transfer = tokenProgram.instructions.transfer.decode(tokenIns);
             if (!transfer?.accounts?.source || !transfer?.accounts?.destination) continue;
 
@@ -235,9 +237,7 @@ export function decodeTokenTransfers(ins: Instruction) {
                 postOwner: destBalance?.postOwner
             });
         } catch (e) {
-            // Skip non-transfer instructions
-            //console.log(e)
-
+            console.error('Error decoding token transfer instruction:', e)
         }
     }
 
@@ -264,6 +264,9 @@ export function decodeTokenTransfersChecked(ins: Instruction) {
 
     for (const tokenIns of tokenInstructions) {
         try {
+            if (tokenIns.d1 !== tokenProgram.instructions.transferChecked.d1) 
+                continue;
+
             const transferChecked = tokenProgram.instructions.transferChecked.decode(tokenIns);
             if (
                 !transferChecked?.accounts?.source ||
@@ -288,8 +291,7 @@ export function decodeTokenTransfersChecked(ins: Instruction) {
                 postOwner: destBalance?.postOwner
             });
         } catch (e) {
-            // Skip non-transferChecked instructions
-            // console.log(e);
+            console.error('Error decoding token transfer checked instruction:', e)
         }
     }
 
@@ -311,6 +313,8 @@ export function decodeSystemCreateAccounts(ins: Instruction) {
 
     for (const systemIns of systemInstructions) {
         try {
+            if (systemIns.d4 !== systemProgram.instructions.createAccount.d4) 
+                continue;
             const createAccount = systemProgram.instructions.createAccount.decode(systemIns);
             if (!createAccount?.accounts?.source || !createAccount?.accounts?.newAccount) continue;
 
@@ -322,7 +326,7 @@ export function decodeSystemCreateAccounts(ins: Instruction) {
                 owner: createAccount.data.owner,
             });
         } catch (e) {
-            // Skip non-createAccount instructions
+            console.error('Error decoding system create account instruction:', e)
         }
     }
 
