@@ -84,7 +84,6 @@ export class PoolService {
     public async getOrCreateDammPool(
         poolAddress: string,
         basePool: BasePool,
-        lpMint: string,
         aVault: string,
         bVault: string,
         aVaultLpMint: string,
@@ -98,7 +97,6 @@ export class PoolService {
 
         const pool = new DAMMPool({
             id: poolId,
-            lpMint,
             aVault,
             bVault,
             aVaultLpMint,

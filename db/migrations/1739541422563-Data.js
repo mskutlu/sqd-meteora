@@ -1,5 +1,5 @@
-module.exports = class Data1737749053959 {
-    name = 'Data1737749053959'
+module.exports = class Data1739541422563 {
+    name = 'Data1739541422563'
 
     async up(db) {
         await db.query(`CREATE TABLE "base_pool" ("id" character varying NOT NULL, "token_x" text NOT NULL, "token_y" text NOT NULL, "token_x_vault" text NOT NULL, "token_y_vault" text NOT NULL, "reserve_x" numeric NOT NULL, "reserve_y" numeric NOT NULL, "total_liquidity" numeric NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL, "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL, "status" boolean NOT NULL, CONSTRAINT "PK_eddfb05533fbdd025660778c6a2" PRIMARY KEY ("id"))`)
@@ -14,10 +14,8 @@ module.exports = class Data1737749053959 {
         await db.query(`CREATE TABLE "damm_liquidity_change" ("id" character varying NOT NULL, "type" text NOT NULL, "token_x_amount" numeric NOT NULL, "token_y_amount" numeric NOT NULL, "lp_token_amount" numeric NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pool_id" character varying, "position_id" character varying, CONSTRAINT "PK_67bda5c591b015b1ce9072e3f35" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_eea1e177db6ba34da108495701" ON "damm_liquidity_change" ("pool_id") `)
         await db.query(`CREATE INDEX "IDX_a99d0f9244c3b0a0480dd4961f" ON "damm_liquidity_change" ("position_id") `)
-        await db.query(`CREATE TABLE "damm_pool" ("id" character varying NOT NULL, "lp_mint" text NOT NULL, "a_vault" text NOT NULL, "b_vault" text NOT NULL, "a_vault_lp_mint" text NOT NULL, "b_vault_lp_mint" text NOT NULL, "curve_type" text NOT NULL, "base_pool_id" character varying, CONSTRAINT "PK_0a66d90f6caa1ebe79052cbc7af" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "damm_pool" ("id" character varying NOT NULL, "a_vault" text NOT NULL, "b_vault" text NOT NULL, "a_vault_lp_mint" text NOT NULL, "b_vault_lp_mint" text NOT NULL, "curve_type" text NOT NULL, "base_pool_id" character varying, CONSTRAINT "PK_0a66d90f6caa1ebe79052cbc7af" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_14bf1ffa529edfd292278071e4" ON "damm_pool" ("base_pool_id") `)
-        await db.query(`CREATE TABLE "dlmm_oracle" ("id" character varying NOT NULL, "length" integer NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pool_id" character varying, CONSTRAINT "REL_fff801a76a21842007445df1de" UNIQUE ("pool_id"), CONSTRAINT "PK_c4c8c6c9867528894b2f5f7ab1f" PRIMARY KEY ("id"))`)
-        await db.query(`CREATE UNIQUE INDEX "IDX_fff801a76a21842007445df1de" ON "dlmm_oracle" ("pool_id") `)
         await db.query(`CREATE TABLE "dlmm_liquidity_change" ("id" character varying NOT NULL, "type" text NOT NULL, "token_x_amount" numeric NOT NULL, "token_y_amount" numeric NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pool_id" character varying, "position_id" character varying, CONSTRAINT "PK_376b58942eeef91f8e02693ea48" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_e6a2223d6ead84b4798c64a3f2" ON "dlmm_liquidity_change" ("pool_id") `)
         await db.query(`CREATE INDEX "IDX_0d271c61c28f5c85794883b000" ON "dlmm_liquidity_change" ("position_id") `)
@@ -27,8 +25,8 @@ module.exports = class Data1737749053959 {
         await db.query(`CREATE INDEX "IDX_9ec5ebbb8356e5f43589047fc7" ON "dlmm_swap" ("pool_id") `)
         await db.query(`CREATE TABLE "dlmm_reward" ("id" character varying NOT NULL, "reward_index" integer NOT NULL, "reward_duration" numeric NOT NULL, "funder" text NOT NULL, "amount" numeric NOT NULL, "last_update_time" TIMESTAMP WITH TIME ZONE NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL, "pool_id" character varying, CONSTRAINT "PK_ced7090955778603dde1b17ac59" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a2b84415c94c762f82d06b363d" ON "dlmm_reward" ("pool_id") `)
-        await db.query(`CREATE TABLE "dlmm_bin_array" ("id" character varying NOT NULL, "index" numeric NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL, "pool_id" character varying, CONSTRAINT "PK_cf803abda9fd8b53a45351a249a" PRIMARY KEY ("id"))`)
-        await db.query(`CREATE INDEX "IDX_ad6f716e7d149bf1b6e60bd09e" ON "dlmm_bin_array" ("pool_id") `)
+        await db.query(`CREATE TABLE "dlmm_fee" ("id" character varying NOT NULL, "position" text NOT NULL, "user" text NOT NULL, "amount_x" numeric NOT NULL, "amount_y" numeric NOT NULL, "type" text NOT NULL, "timestamp" integer NOT NULL, "pool_id" character varying, CONSTRAINT "PK_05c69a33487c9a4b4d9af395c2d" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE INDEX "IDX_7ed40d0481bc3ad9bbe1025fe3" ON "dlmm_fee" ("pool_id") `)
         await db.query(`CREATE TABLE "dlmm_pool" ("id" character varying NOT NULL, "bin_step" integer NOT NULL, "active_id" integer NOT NULL, "activation_point" numeric, "pre_activation_duration" numeric, "pre_activation_swap_address" text, "base_pool_id" character varying, CONSTRAINT "PK_2d2a83e1e4ee59b5d7e139038ee" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a3fa4326aadf455c3dbbc72980" ON "dlmm_pool" ("base_pool_id") `)
         await db.query(`ALTER TABLE "damm_liquidity_position" ADD CONSTRAINT "FK_61db474023f35025de0a0b57618" FOREIGN KEY ("pool_id") REFERENCES "damm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
@@ -38,13 +36,12 @@ module.exports = class Data1737749053959 {
         await db.query(`ALTER TABLE "damm_liquidity_change" ADD CONSTRAINT "FK_eea1e177db6ba34da108495701a" FOREIGN KEY ("pool_id") REFERENCES "damm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "damm_liquidity_change" ADD CONSTRAINT "FK_a99d0f9244c3b0a0480dd4961fd" FOREIGN KEY ("position_id") REFERENCES "damm_liquidity_position"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "damm_pool" ADD CONSTRAINT "FK_14bf1ffa529edfd292278071e45" FOREIGN KEY ("base_pool_id") REFERENCES "base_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
-        await db.query(`ALTER TABLE "dlmm_oracle" ADD CONSTRAINT "FK_fff801a76a21842007445df1de3" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_liquidity_change" ADD CONSTRAINT "FK_e6a2223d6ead84b4798c64a3f26" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_liquidity_change" ADD CONSTRAINT "FK_0d271c61c28f5c85794883b0005" FOREIGN KEY ("position_id") REFERENCES "dlmm_position"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_position" ADD CONSTRAINT "FK_5eb6e2f567f550ac1412158c9e0" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_swap" ADD CONSTRAINT "FK_9ec5ebbb8356e5f43589047fc7b" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_reward" ADD CONSTRAINT "FK_a2b84415c94c762f82d06b363d4" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
-        await db.query(`ALTER TABLE "dlmm_bin_array" ADD CONSTRAINT "FK_ad6f716e7d149bf1b6e60bd09ef" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
+        await db.query(`ALTER TABLE "dlmm_fee" ADD CONSTRAINT "FK_7ed40d0481bc3ad9bbe1025fe3c" FOREIGN KEY ("pool_id") REFERENCES "dlmm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "dlmm_pool" ADD CONSTRAINT "FK_a3fa4326aadf455c3dbbc72980a" FOREIGN KEY ("base_pool_id") REFERENCES "base_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
     }
 
@@ -63,8 +60,6 @@ module.exports = class Data1737749053959 {
         await db.query(`DROP INDEX "public"."IDX_a99d0f9244c3b0a0480dd4961f"`)
         await db.query(`DROP TABLE "damm_pool"`)
         await db.query(`DROP INDEX "public"."IDX_14bf1ffa529edfd292278071e4"`)
-        await db.query(`DROP TABLE "dlmm_oracle"`)
-        await db.query(`DROP INDEX "public"."IDX_fff801a76a21842007445df1de"`)
         await db.query(`DROP TABLE "dlmm_liquidity_change"`)
         await db.query(`DROP INDEX "public"."IDX_e6a2223d6ead84b4798c64a3f2"`)
         await db.query(`DROP INDEX "public"."IDX_0d271c61c28f5c85794883b000"`)
@@ -74,8 +69,8 @@ module.exports = class Data1737749053959 {
         await db.query(`DROP INDEX "public"."IDX_9ec5ebbb8356e5f43589047fc7"`)
         await db.query(`DROP TABLE "dlmm_reward"`)
         await db.query(`DROP INDEX "public"."IDX_a2b84415c94c762f82d06b363d"`)
-        await db.query(`DROP TABLE "dlmm_bin_array"`)
-        await db.query(`DROP INDEX "public"."IDX_ad6f716e7d149bf1b6e60bd09e"`)
+        await db.query(`DROP TABLE "dlmm_fee"`)
+        await db.query(`DROP INDEX "public"."IDX_7ed40d0481bc3ad9bbe1025fe3"`)
         await db.query(`DROP TABLE "dlmm_pool"`)
         await db.query(`DROP INDEX "public"."IDX_a3fa4326aadf455c3dbbc72980"`)
         await db.query(`ALTER TABLE "damm_liquidity_position" DROP CONSTRAINT "FK_61db474023f35025de0a0b57618"`)
@@ -85,13 +80,12 @@ module.exports = class Data1737749053959 {
         await db.query(`ALTER TABLE "damm_liquidity_change" DROP CONSTRAINT "FK_eea1e177db6ba34da108495701a"`)
         await db.query(`ALTER TABLE "damm_liquidity_change" DROP CONSTRAINT "FK_a99d0f9244c3b0a0480dd4961fd"`)
         await db.query(`ALTER TABLE "damm_pool" DROP CONSTRAINT "FK_14bf1ffa529edfd292278071e45"`)
-        await db.query(`ALTER TABLE "dlmm_oracle" DROP CONSTRAINT "FK_fff801a76a21842007445df1de3"`)
         await db.query(`ALTER TABLE "dlmm_liquidity_change" DROP CONSTRAINT "FK_e6a2223d6ead84b4798c64a3f26"`)
         await db.query(`ALTER TABLE "dlmm_liquidity_change" DROP CONSTRAINT "FK_0d271c61c28f5c85794883b0005"`)
         await db.query(`ALTER TABLE "dlmm_position" DROP CONSTRAINT "FK_5eb6e2f567f550ac1412158c9e0"`)
         await db.query(`ALTER TABLE "dlmm_swap" DROP CONSTRAINT "FK_9ec5ebbb8356e5f43589047fc7b"`)
         await db.query(`ALTER TABLE "dlmm_reward" DROP CONSTRAINT "FK_a2b84415c94c762f82d06b363d4"`)
-        await db.query(`ALTER TABLE "dlmm_bin_array" DROP CONSTRAINT "FK_ad6f716e7d149bf1b6e60bd09ef"`)
+        await db.query(`ALTER TABLE "dlmm_fee" DROP CONSTRAINT "FK_7ed40d0481bc3ad9bbe1025fe3c"`)
         await db.query(`ALTER TABLE "dlmm_pool" DROP CONSTRAINT "FK_a3fa4326aadf455c3dbbc72980a"`)
     }
 }

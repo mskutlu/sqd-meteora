@@ -110,18 +110,16 @@ export interface FundRewardAccounts {
 export interface ClaimRewardAccounts {
     lbPair: string
     position: string
-    user: string
+    sender: string
     rewardVault: string
-    userRewardToken: string
 }
 
 export interface ClaimFeeAccounts {
     lbPair: string
     position: string
-    user: string
+    sender: string
     reserveX: string
     reserveY: string
-    feeOwner: string
     userTokenX: string
     userTokenY: string
 }

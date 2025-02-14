@@ -17,7 +17,6 @@ type BasePool @entity {
 type DAMMPool @entity {
   id: ID!
   basePool: BasePool!
-  lpMint: String!
   aVault: String!
   bVault: String!
   aVaultLpMint: String!

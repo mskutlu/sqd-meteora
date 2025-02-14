@@ -20,9 +20,6 @@ export class DAMMPool {
     basePool!: BasePool
 
     @StringColumn_({nullable: false})
-    lpMint!: string
-
-    @StringColumn_({nullable: false})
     aVault!: string
 
     @StringColumn_({nullable: false})

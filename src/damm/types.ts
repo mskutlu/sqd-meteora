@@ -3,7 +3,7 @@ import { CurveType } from '../abi/damm/types'
 // Base interface for common accounts
 interface BaseAccounts {
     pool: string
-    lpMint?: string
+    lpMint: string
     tokenProgram: string
     vaultProgram: string
     user: string

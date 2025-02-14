@@ -214,12 +214,11 @@ export function decodeTokenTransfers(ins: Instruction) {
 
     const tokenInstructions = ins.inner.filter(
         f => f.programId.toLowerCase() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'.toLowerCase()
+        && f.d1 === tokenProgram.instructions.transfer.d1
     );
 
     for (const tokenIns of tokenInstructions) {
         try {
-            if (tokenIns.d1 !== tokenProgram.instructions.transfer.d1) 
-                continue;
             const transfer = tokenProgram.instructions.transfer.decode(tokenIns);
             if (!transfer?.accounts?.source || !transfer?.accounts?.destination) continue;
 
@@ -259,14 +258,12 @@ export function decodeTokenTransfersChecked(ins: Instruction) {
     }> = [];
 
     const tokenInstructions = ins.inner.filter(
-        f => f.programId.toLowerCase() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'.toLowerCase()
+        f => f.programId.toLowerCase() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'.toLowerCase() 
+        && f.d1 === tokenProgram.instructions.transferChecked.d1
     );
 
     for (const tokenIns of tokenInstructions) {
         try {
-            if (tokenIns.d1 !== tokenProgram.instructions.transferChecked.d1) 
-                continue;
-
             const transferChecked = tokenProgram.instructions.transferChecked.decode(tokenIns);
             if (
                 !transferChecked?.accounts?.source ||
@@ -308,13 +305,12 @@ export function decodeSystemCreateAccounts(ins: Instruction) {
     }> = [];
 
     const systemInstructions = ins.inner.filter(
-        f => f.programId.toLowerCase() === '11111111111111111111111111111111'.toLowerCase()
+        f => f.programId.toLowerCase() === '11111111111111111111111111111111'.toLowerCase() 
+        && f.d4 === systemProgram.instructions.createAccount.d4
     );
 
     for (const systemIns of systemInstructions) {
         try {
-            if (systemIns.d4 !== systemProgram.instructions.createAccount.d4) 
-                continue;
             const createAccount = systemProgram.instructions.createAccount.decode(systemIns);
             if (!createAccount?.accounts?.source || !createAccount?.accounts?.newAccount) continue;
 

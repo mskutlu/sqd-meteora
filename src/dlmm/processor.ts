@@ -119,7 +119,10 @@ export class DlmmProcessor {
     private async handleInitializePool(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleInitializePool: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts, data } = decoded as { accounts: dlmmTypes.InitializePoolAccounts, data: any }
@@ -134,7 +137,20 @@ export class DlmmProcessor {
                 funder
             } = accounts
 
-            if (!poolAddress || !tokenMintX || !tokenMintY || !reserveX || !reserveY || !oracle || !funder) {
+            // Check for missing required parameters and log specific errors
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token mint X', tokenMintX],
+                ['token mint Y', tokenMintY],
+                ['reserve X', reserveX],
+                ['reserve Y', reserveY],
+                ['oracle', oracle],
+                ['funder', funder]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleInitializePool: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
@@ -187,10 +203,13 @@ export class DlmmProcessor {
     private async handleSwap(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleSwap: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
-            const { accounts, data } = decoded as { accounts: dlmmTypes.SwapAccounts, data: dlmmTypes.SwapData }
+            const { accounts } = decoded as { accounts: dlmmTypes.SwapAccounts, data: dlmmTypes.SwapData }
 
             const {
                 lbPair: poolAddress,
@@ -203,17 +222,40 @@ export class DlmmProcessor {
                 user
             } = accounts
 
-            // Basic checks
-            if (!poolAddress || !reserveX || !reserveY || !userTokenIn || !userTokenOut || !user) {
+            // Check for missing required parameters
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['reserve X', reserveX],
+                ['reserve Y', reserveY],
+                ['user token in', userTokenIn],
+                ['user token out', userTokenOut],
+                ['user', user]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleSwap: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             // Get existing pool
-            const basePool = await this.poolService.getBasePool(poolAddress)
-            if (!basePool) return
+            const basePool = await this.poolService.getOrCreateBasePool(
+                poolAddress,
+                reserveX,
+                reserveY,
+                tokenXMint,
+                tokenYMint,
+                0n,
+                0n,
+                timestamp
+            )
 
-            const dlmmPool = await this.poolService.getPool(poolAddress)
-            if (!dlmmPool) return
+            const dlmmPool = await this.poolService.getOrCreateDlmmPool(
+                poolAddress,
+                basePool,
+                0,
+                0
+            )
 
             // Decode all token transfers (transferChecked)
             const transfers = decodeTokenTransfersChecked(ins)
@@ -223,19 +265,23 @@ export class DlmmProcessor {
             let withdrawX = 0n
             let depositY = 0n
             let withdrawY = 0n
-
+            let isXtoY = false;
             for (const t of transfers) {
                 if (t.destination === reserveX) {
                     depositX += t.amount
+                    isXtoY = true;
                 }
                 if (t.source === reserveX) {
                     withdrawX += t.amount
+                    isXtoY = false;
                 }
                 if (t.destination === reserveY) {
                     depositY += t.amount
+                    isXtoY = false;
                 }
                 if (t.source === reserveY) {
                     withdrawY += t.amount
+                    isXtoY = true;
                 }
             }
 
@@ -248,23 +294,18 @@ export class DlmmProcessor {
             let inputMint: string
             let outputMint: string
 
-            // If X is negative (flow out) and Y is positive (flow in), it's X->Y
-            // If Y is negative (flow out) and X is positive (flow in), it's Y->X
-            if (netFlowX < 0n && netFlowY > 0n) {
+            if (isXtoY) {
                 // X -> Y
-                amountIn = -netFlowX // netFlowX is negative => input
+                amountIn = -netFlowX
                 amountOut = netFlowY
                 inputMint = tokenXMint
                 outputMint = tokenYMint
-            } else if (netFlowY < 0n && netFlowX > 0n) {
+            } else  {
                 // Y -> X
                 amountIn = -netFlowY
                 amountOut = netFlowX
                 inputMint = tokenYMint
                 outputMint = tokenXMint
-            } else {
-                // no valid swap pattern found
-                return
             }
 
             // Create swap record
@@ -304,7 +345,10 @@ export class DlmmProcessor {
     private async handleAddLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleAddLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts, data } = decoded as { accounts: dlmmTypes.AddLiquidityAccounts, data: dlmmTypes.AddLiquidityData }
@@ -315,16 +359,27 @@ export class DlmmProcessor {
                 reserveY,
                 userTokenX,
                 userTokenY,
-                user,
                 position
             } = accounts
 
-            if (!poolAddress || !reserveX || !reserveY || !userTokenX || !userTokenY || !user || !position) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['reserve X', reserveX],
+                ['reserve Y', reserveY],
+                ['user token X', userTokenX],
+                ['user token Y', userTokenY],
+                ['position', position]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleAddLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             const dlmmPool = await this.poolService.getPool(poolAddress)
             if (!dlmmPool) {
+                console.error(`Error in handleAddLiquidity: Could not find DLMM pool for address: ${poolAddress}`)
                 return
             }
 
@@ -364,6 +419,7 @@ export class DlmmProcessor {
             // get position entity
             const dlmmPosition = await this.positionService.getPosition(position)
             if (!dlmmPosition) {
+                console.error(`Error in handleAddLiquidity: Could not find position: ${position}`)
                 return
             }
 
@@ -405,7 +461,10 @@ export class DlmmProcessor {
     private async handleRemoveLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleRemoveLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts, data } = decoded as { accounts: dlmmTypes.RemoveLiquidityAccounts, data: dlmmTypes.RemoveLiquidityData }
@@ -416,16 +475,29 @@ export class DlmmProcessor {
                 reserveY,
                 userTokenX,
                 userTokenY,
-                user,
                 position
             } = accounts
 
-            if (!poolAddress || !reserveX || !reserveY || !userTokenX || !userTokenY || !user || !position) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['reserve X', reserveX],
+                ['reserve Y', reserveY],
+                ['user token X', userTokenX],
+                ['user token Y', userTokenY],
+                ['position', position]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleRemoveLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             const dlmmPool = await this.poolService.getPool(poolAddress)
-            if (!dlmmPool) return
+            if (!dlmmPool) {
+                console.error(`Error in handleRemoveLiquidity: Could not find DLMM pool for address: ${poolAddress}`)
+                return
+            }
 
             const transfers = decodeTokenTransfersChecked(ins)
 
@@ -463,6 +535,7 @@ export class DlmmProcessor {
             // get position entity
             const dlmmPosition = await this.positionService.getPosition(position)
             if (!dlmmPosition) {
+                console.error(`Error in handleRemoveLiquidity: Could not find position: ${position}`)
                 return
             }
 
@@ -500,16 +573,31 @@ export class DlmmProcessor {
     private async handleInitializeReward(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleInitializeReward: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts, data } = decoded as { accounts: dlmmTypes.InitializeRewardAccounts, data: any }
 
             const { lbPair, funder } = accounts
-            if (!lbPair || !funder) return
+            const missingParams = [
+                ['lb pair', lbPair],
+                ['funder', funder]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleInitializeReward: Missing required parameters: ${missingParams.join(', ')}`)
+                return
+            }
 
             const pool = await this.poolService.getPool(lbPair)
-            if (!pool) return
+            if (!pool) {
+                console.error(`Error in handleInitializeReward: Could not find DLMM pool for address: ${lbPair}`)
+                return
+            }
 
             await this.rewardService.createReward(
                 pool,
@@ -527,19 +615,28 @@ export class DlmmProcessor {
     private async handleFundReward(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleFundReward: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts, data } = decoded as { accounts: dlmmTypes.FundRewardAccounts, data: any }
 
             const { lbPair } = accounts
-            if (!lbPair) return
+            if (!lbPair) {
+                console.error('Error in handleFundReward: Missing required parameter: lb pair')
+                return
+            }
 
             const pool = await this.poolService.getPool(lbPair)
             if (!pool) return
 
             const reward = await this.rewardService.getReward(pool.id, data.rewardIndex)
-            if (!reward) return
+            if (!reward) {
+                console.error(`Error in handleFundReward: Could not find reward for pool ${pool.id} with index ${data.rewardIndex}`)
+                return
+            }
 
             await this.rewardService.updateReward(
                 reward,
@@ -554,7 +651,10 @@ export class DlmmProcessor {
     private async handleClaimReward(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleClaimReward: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts } = decoded as { accounts: dlmmTypes.ClaimRewardAccounts }
@@ -562,12 +662,20 @@ export class DlmmProcessor {
             const {
                 lbPair: poolAddress,
                 position,
-                user,
+                sender,
                 rewardVault,
-                userRewardToken
             } = accounts
 
-            if (!poolAddress || !position || !user || !rewardVault || !userRewardToken) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['position', position],
+                ['sender', sender],
+                ['reward vault', rewardVault],
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleClaimReward: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
@@ -575,7 +683,7 @@ export class DlmmProcessor {
 
             // Look for both outgoing and incoming transfers
             const rewardOut = transfers.find(t => t.source === rewardVault)
-            const rewardIn = transfers.find(t => t.destination === userRewardToken)
+            const rewardIn = transfers.find(t => t.destination === sender)
 
             if (!rewardOut || !rewardIn) {
                 return
@@ -589,7 +697,7 @@ export class DlmmProcessor {
                 pool,
                 0, // rewardIndex (you may want to parse from data)
                 0n, // rewardDuration
-                user,
+                sender,
                 rewardOut.amount,
                 timestamp
             )
@@ -598,7 +706,7 @@ export class DlmmProcessor {
                 pool,
                 0, // rewardIndex
                 0n, // rewardDuration
-                user,
+                sender,
                 rewardIn.amount,
                 timestamp
             )
@@ -610,7 +718,10 @@ export class DlmmProcessor {
     private async handleClaimFee(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(dlmm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleClaimFee: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode(ins) as unknown
             const { accounts } = decoded as { accounts: dlmmTypes.ClaimFeeAccounts }
@@ -618,20 +729,34 @@ export class DlmmProcessor {
             const {
                 lbPair: poolAddress,
                 position,
-                user,
                 reserveX,
                 reserveY,
-                feeOwner,
                 userTokenX,
-                userTokenY
+                userTokenY,
+                sender
             } = accounts
 
-            if (!poolAddress || !position || !user || !reserveX || !reserveY || !feeOwner || !userTokenX || !userTokenY) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['position', position],
+                ['reserve X', reserveX],
+                ['reserve Y', reserveY],
+                ['user token X', userTokenX],
+                ['user token Y', userTokenY],
+                ['sender', sender]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleClaimFee: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             const pool = await this.poolService.getPool(poolAddress)
-            if (!pool) return
+            if (!pool) {
+                console.error(`Error in handleClaimFee: Could not find DLMM pool for address: ${poolAddress}`)
+                return
+            }
 
             const transfers = decodeTokenTransfersChecked(ins)
 
@@ -649,7 +774,7 @@ export class DlmmProcessor {
                     ins.transaction?.id || '',
                     pool,
                     position,
-                    user,
+                    sender,
                     xOut.amount,
                     0n,
                     timestamp,
@@ -661,7 +786,7 @@ export class DlmmProcessor {
                     ins.transaction?.id || '',
                     pool,
                     position,
-                    user,
+                    sender,
                     0n,
                     yOut.amount,
                     timestamp,
@@ -673,7 +798,7 @@ export class DlmmProcessor {
                     ins.transaction?.id || '',
                     pool,
                     position,
-                    user,
+                    sender,
                     xIn.amount,
                     0n,
                     timestamp,
@@ -685,7 +810,7 @@ export class DlmmProcessor {
                     ins.transaction?.id || '',
                     pool,
                     position,
-                    user,
+                    sender,
                     0n,
                     yIn.amount,
                     timestamp,
@@ -700,8 +825,16 @@ export class DlmmProcessor {
     private async handleTogglePairStatus(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const lbPair = ins.accounts[0]
+            if (!lbPair) {
+                console.error('Error in handleTogglePairStatus: Missing required parameter: lb pair')
+                return
+            }
+            
             const basePool = await this.poolService.getBasePool(lbPair)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleTogglePairStatus: Could not find base pool for lb pair: ${lbPair}`)
+                return
+            }
 
             await this.poolService.updateBasePool(
                 basePool,

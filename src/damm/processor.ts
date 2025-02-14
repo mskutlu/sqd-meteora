@@ -9,7 +9,6 @@ import { FeeService } from './fee.service'
 import { LockService } from './lock.service'
 import * as damm from '../abi/damm'
 import * as dammTypes from './types'
-import * as tokenProgram from '../abi/token-program'
 import { decodeTokenTransfers } from "../utils"
 
 export class DammProcessor {
@@ -65,50 +64,45 @@ export class DammProcessor {
                 return
             }
 
-            try {
-                switch (layout.d8) {
-                    case damm.instructions.initializePermissionedPool.d8:
-                    case damm.instructions.initializePermissionlessPool.d8:
-                    case damm.instructions.initializePermissionlessPoolWithFeeTier.d8:
-                    case damm.instructions.initializePermissionlessConstantProductPoolWithConfig.d8:
-                    case damm.instructions.initializePermissionlessConstantProductPoolWithConfig2.d8:
-                    case damm.instructions.initializeCustomizablePermissionlessConstantProductPool.d8:
-                        await this.handleInitializePool(ins, timestamp)
-                        break
-                    case damm.instructions.swap.d8:
-                        await this.handleSwap(ins, timestamp)
-                        break
-                    case damm.instructions.addBalanceLiquidity.d8:
-                        await this.handleAddBalanceLiquidity(ins, timestamp)
-                        break
-                    case damm.instructions.removeBalanceLiquidity.d8:
-                        await this.handleRemoveBalanceLiquidity(ins, timestamp)
-                        break
-                    case damm.instructions.addImbalanceLiquidity.d8:
-                        await this.handleAddImbalanceLiquidity(ins, timestamp)
-                        break
-                    case damm.instructions.removeLiquiditySingleSide.d8:
-                        await this.handleRemoveLiquiditySingleSide(ins, timestamp)
-                        break
-                    case damm.instructions.bootstrapLiquidity.d8:
-                        await this.handleBootstrapLiquidity(ins, timestamp)
-                        break
-                    case damm.instructions.enableOrDisablePool.d8:
-                        await this.handleEnableOrDisablePool(ins, timestamp)
-                        break
-                    case damm.instructions.overrideCurveParam.d8:
-                        await this.handleOverrideCurveParam(ins, timestamp)
-                        break
-                    case damm.instructions.claimFee.d8:
-                        await this.handleClaimFee(ins, timestamp)
-                        break
-                    default:
-                        // do nothing
-                        break
-                }
-            } catch (decodeError) {
-                // If decoding fails for some reason, skip
-                return
+            switch (layout.d8) {
+                case damm.instructions.initializePermissionedPool.d8:
+                case damm.instructions.initializePermissionlessPool.d8:
+                case damm.instructions.initializePermissionlessPoolWithFeeTier.d8:
+                case damm.instructions.initializePermissionlessConstantProductPoolWithConfig.d8:
+                case damm.instructions.initializePermissionlessConstantProductPoolWithConfig2.d8:
+                case damm.instructions.initializeCustomizablePermissionlessConstantProductPool.d8:
+                    await this.handleInitializePool(ins, timestamp)
+                    break
+                case damm.instructions.swap.d8:
+                    await this.handleSwap(ins, timestamp)
+                    break
+                case damm.instructions.addBalanceLiquidity.d8:
+                    await this.handleAddBalanceLiquidity(ins, timestamp)
+                    break
+                case damm.instructions.removeBalanceLiquidity.d8:
+                    await this.handleRemoveBalanceLiquidity(ins, timestamp)
+                    break
+                case damm.instructions.addImbalanceLiquidity.d8:
+                    await this.handleAddImbalanceLiquidity(ins, timestamp)
+                    break
+                case damm.instructions.removeLiquiditySingleSide.d8:
+                    await this.handleRemoveLiquiditySingleSide(ins, timestamp)
+                    break
+                case damm.instructions.bootstrapLiquidity.d8:
+                    await this.handleBootstrapLiquidity(ins, timestamp)
+                    break
+                case damm.instructions.enableOrDisablePool.d8:
+                    await this.handleEnableOrDisablePool(ins, timestamp)
+                    break
+                case damm.instructions.overrideCurveParam.d8:
+                    await this.handleOverrideCurveParam(ins, timestamp)
+                    break
+                case damm.instructions.claimFee.d8:
+                    await this.handleClaimFee(ins, timestamp)
+                    break
+                default:
+                    // do nothing
+                    break
             }
         } catch (error) {
             console.error(`Error processing instruction ${ins.d8}:`, error)
@@ -122,7 +116,10 @@ export class DammProcessor {
     private async handleInitializePool(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleInitializePool: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -135,7 +132,6 @@ export class DammProcessor {
             const { accounts, data } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 tokenAMint,
                 tokenBMint,
                 aTokenVault,
@@ -144,7 +140,19 @@ export class DammProcessor {
                 bVaultLpMint
             } = accounts
 
-            if (!poolAddress || !lpMint || !aTokenVault || !bTokenVault || !aVaultLpMint || !bVaultLpMint) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['vault A LP mint', aVaultLpMint],
+                ['vault B LP mint', bVaultLpMint],
+                ['token A mint', tokenAMint],
+                ['token B mint', tokenBMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleInitializePool: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
@@ -171,7 +179,10 @@ export class DammProcessor {
     private async handleSwap(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleSwap: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -182,21 +193,41 @@ export class DammProcessor {
             }
 
             const { accounts } = decoded
-            const { pool: poolAddress, user, aVault, bVault, lpMint } = accounts
+            const { pool: poolAddress, user, aVault, bVault, aTokenVault, bTokenVault } = accounts
 
-            if (!poolAddress || !user) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['user', user],
+                ['A vault', aVault],
+                ['B vault', bVault],
+                ['vault A token', aTokenVault],
+                ['vault B token', bTokenVault]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleSwap: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
-            // 1) Find base pool
-            const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            // 1) Find or create base pool
+
+            const basePool = await this.poolService.getOrCreateBasePool(
+                poolAddress,
+                aTokenVault,
+                aTokenVault,
+                aTokenVault,
+                aTokenVault,
+                0n,
+                0n,
+                timestamp
+            )
+
 
             // 2) Possibly create DAMM pool
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint || '',
                 aVault,
                 bVault,
                 accounts.aVaultLpMint,
@@ -209,45 +240,46 @@ export class DammProcessor {
             // 4) Compute net flow
             let depositX = 0n, withdrawX = 0n
             let depositY = 0n, withdrawY = 0n
+            let isXtoY = false;
             for (const t of transfers) {
                 if (t.destination === basePool.tokenXVault) {
                     depositX += t.amount
+                    isXtoY = true;
                 }
                 if (t.source === basePool.tokenXVault) {
                     withdrawX += t.amount
+                    isXtoY = false;
                 }
                 if (t.destination === basePool.tokenYVault) {
                     depositY += t.amount
+                    isXtoY = false;
                 }
                 if (t.source === basePool.tokenYVault) {
                     withdrawY += t.amount
+                    isXtoY = true;
                 }
             }
             const netFlowX = depositX - withdrawX
             const netFlowY = depositY - withdrawY
 
-            // 5) Figure out direction & amounts
             let amountIn = 0n
             let amountOut = 0n
             let inMint = ''
             let outMint = ''
 
-            // X→Y: netFlowX > 0, netFlowY < 0
-            if (netFlowX > 0n && netFlowY < 0n) {
+            // X→Y:
+            if (isXtoY) {
                 amountIn = netFlowX
                 amountOut = -netFlowY
                 inMint = basePool.tokenX
                 outMint = basePool.tokenY
             }
-            // Y→X: netFlowY > 0, netFlowX < 0
-            else if (netFlowY > 0n && netFlowX < 0n) {
+            // Y→X:
+            else {
                 amountIn = netFlowY
                 amountOut = -netFlowX
                 inMint = basePool.tokenY
                 outMint = basePool.tokenX
-            } else {
-                // Not a valid swap pattern
-                return
             }
 
             // 6) Create swap record
@@ -286,7 +318,10 @@ export class DammProcessor {
     private async handleAddBalanceLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleAddBalanceLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -299,7 +334,6 @@ export class DammProcessor {
             const { accounts, data } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 user,
                 aTokenVault,
                 bTokenVault,
@@ -307,19 +341,32 @@ export class DammProcessor {
                 bVaultLpMint
             } = accounts
 
-            if (!poolAddress || !lpMint || !aTokenVault || !bTokenVault || !user) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['user', user],
+                ['a vault LP mint', aVaultLpMint],
+                ['b vault LP mint', bVaultLpMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleAddBalanceLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             // 1) Get base pool
             const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleAddBalanceLiquidity: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             // 2) Get/create DAMM pool
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aTokenVault,
                 bTokenVault,
                 aVaultLpMint,
@@ -393,7 +440,10 @@ export class DammProcessor {
     private async handleRemoveBalanceLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleRemoveBalanceLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -406,7 +456,6 @@ export class DammProcessor {
             const { accounts, data } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 user,
                 aTokenVault,
                 bTokenVault,
@@ -414,7 +463,18 @@ export class DammProcessor {
                 bVaultLpMint
             } = accounts
 
-            if (!poolAddress || !lpMint || !aTokenVault || !bTokenVault || !user) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['user', user],
+                ['a vault LP mint', aVaultLpMint],
+                ['b vault LP mint', bVaultLpMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleRemoveBalanceLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
@@ -426,7 +486,6 @@ export class DammProcessor {
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aTokenVault,
                 bTokenVault,
                 aVaultLpMint,
@@ -450,7 +509,7 @@ export class DammProcessor {
 
             // For remove liquidity, we typically expect netFlowX <= 0 and netFlowY <= 0
             if (netFlowX >= 0n || netFlowY >= 0n) {
-                // Possibly invalid or no removal
+                console.error(`Error in handleRemoveBalanceLiquidity: Invalid net flows for removal - netFlowX: ${netFlowX}, netFlowY: ${netFlowY}`)
                 return
             }
 
@@ -500,7 +559,10 @@ export class DammProcessor {
     private async handleAddImbalanceLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleAddImbalanceLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -513,29 +575,39 @@ export class DammProcessor {
             const { accounts, data } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 user,
                 aTokenVault,
                 bTokenVault,
                 aVaultLpMint,
                 bVaultLpMint,
-                userAToken,
-                userBToken
             } = accounts
 
-            if (!poolAddress || !lpMint || !user || !aTokenVault || !bTokenVault) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['user', user],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['a vault LP mint', aVaultLpMint],
+                ['b vault LP mint', bVaultLpMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleAddImbalanceLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             // 1) base pool
             const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleAddImbalanceLiquidity: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             // 2) damm pool
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aTokenVault,
                 bTokenVault,
                 aVaultLpMint,
@@ -605,7 +677,10 @@ export class DammProcessor {
     private async handleRemoveLiquiditySingleSide(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleRemoveLiquiditySingleSide: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -618,7 +693,6 @@ export class DammProcessor {
             const { accounts, data } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 user,
                 aTokenVault,
                 bTokenVault,
@@ -626,19 +700,32 @@ export class DammProcessor {
                 bVaultLpMint
             } = accounts
 
-            if (!poolAddress || !lpMint || !aTokenVault || !bTokenVault || !user) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['user', user],
+                ['a vault LP mint', aVaultLpMint],
+                ['b vault LP mint', bVaultLpMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleRemoveLiquiditySingleSide: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             // 1) base pool
             const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleRemoveLiquiditySingleSide: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             // 2) damm pool
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aTokenVault,
                 bTokenVault,
                 aVaultLpMint,
@@ -709,7 +796,10 @@ export class DammProcessor {
     private async handleBootstrapLiquidity(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleBootstrapLiquidity: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -719,10 +809,9 @@ export class DammProcessor {
                 data: dammTypes.BootstrapLiquidityData
             }
 
-            const { accounts, data } = decoded
+            const { accounts } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
                 aTokenVault,
                 bTokenVault,
                 aVault,
@@ -732,7 +821,20 @@ export class DammProcessor {
                 user
             } = accounts
 
-            if (!poolAddress || !lpMint || !aTokenVault || !bTokenVault || !aVault || !bVault || !user) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['vault A', aVault],
+                ['vault B', bVault],
+                ['user', user],
+                ['a vault LP mint', aVaultLpMint],
+                ['b vault LP mint', bVaultLpMint]
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleBootstrapLiquidity: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
@@ -749,7 +851,6 @@ export class DammProcessor {
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aVault,
                 bVault,
                 aVaultLpMint,
@@ -809,7 +910,10 @@ export class DammProcessor {
     private async handleEnableOrDisablePool(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleEnableOrDisablePool: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -821,10 +925,16 @@ export class DammProcessor {
 
             const { accounts, data } = decoded
             const { pool: poolAddress } = accounts
-            if (!poolAddress) return
+            if (!poolAddress) {
+                console.error('Error in handleEnableOrDisablePool: Missing pool address')
+                return
+            }
 
             const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleEnableOrDisablePool: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             await this.poolService.updateBasePool(
                 basePool,
@@ -846,7 +956,10 @@ export class DammProcessor {
     private async handleOverrideCurveParam(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleOverrideCurveParam: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -858,10 +971,16 @@ export class DammProcessor {
 
             const { accounts, data } = decoded
             const { pool: poolAddress } = accounts
-            if (!poolAddress) return
+            if (!poolAddress) {
+                console.error('Error in handleOverrideCurveParam: Missing pool address')
+                return
+            }
 
             const pool = await this.poolService.find(poolAddress)
-            if (!pool) return
+            if (!pool) {
+                console.error(`Error in handleOverrideCurveParam: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             // If you want to store the new curve param, do so in your DB
             // For now, just update the timestamp or something minimal
@@ -885,7 +1004,10 @@ export class DammProcessor {
     private async handleClaimFee(ins: Instruction, timestamp: number): Promise<void> {
         try {
             const layout = Object.values(damm.instructions).find(i => i.d8 === ins.d8)
-            if (!layout) return
+            if (!layout) {
+                console.error(`Error in handleClaimFee: Could not find instruction layout for d8: ${ins.d8}`)
+                return
+            }
 
             const decoded = layout.decode({
                 data: ins.data,
@@ -898,34 +1020,41 @@ export class DammProcessor {
             const { accounts } = decoded
             const {
                 pool: poolAddress,
-                lpMint,
-                lockEscrow,
                 owner,
-                sourceTokens,
-                escrowVault,
                 aTokenVault,
                 bTokenVault,
                 aVault,
                 bVault,
                 aVaultLp,
                 bVaultLp,
-                userAToken,
-                userBToken
             } = accounts
 
-            if (!poolAddress || !lpMint || !owner || !aTokenVault || !bTokenVault) {
+            const missingParams = [
+                ['pool address', poolAddress],
+                ['owner', owner],
+                ['token A vault', aTokenVault],
+                ['token B vault', bTokenVault],
+                ['a vault LP mint', aVaultLp],
+                ['b vault LP mint', bVaultLp],
+            ].filter(([name, value]) => !value)
+             .map(([name]) => name)
+
+            if (missingParams.length > 0) {
+                console.error(`Error in handleClaimFee: Missing required parameters: ${missingParams.join(', ')}`)
                 return
             }
 
             // 1) base pool
             const basePool = await this.poolService.find(poolAddress)
-            if (!basePool) return
+            if (!basePool) {
+                console.error(`Error in handleClaimFee: Could not find base pool for address: ${poolAddress}`)
+                return
+            }
 
             // 2) damm pool
             const dammPool = await this.poolService.getOrCreateDammPool(
                 poolAddress,
                 basePool,
-                lpMint,
                 aVault,
                 bVault,
                 aVaultLp,
