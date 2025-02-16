@@ -27,7 +27,7 @@ module.exports = class Data1739541422563 {
         await db.query(`CREATE INDEX "IDX_a2b84415c94c762f82d06b363d" ON "dlmm_reward" ("pool_id") `)
         await db.query(`CREATE TABLE "dlmm_fee" ("id" character varying NOT NULL, "position" text NOT NULL, "user" text NOT NULL, "amount_x" numeric NOT NULL, "amount_y" numeric NOT NULL, "type" text NOT NULL, "timestamp" integer NOT NULL, "pool_id" character varying, CONSTRAINT "PK_05c69a33487c9a4b4d9af395c2d" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_7ed40d0481bc3ad9bbe1025fe3" ON "dlmm_fee" ("pool_id") `)
-        await db.query(`CREATE TABLE "dlmm_pool" ("id" character varying NOT NULL, "bin_step" integer NOT NULL, "active_id" integer NOT NULL, "activation_point" numeric, "pre_activation_duration" numeric, "pre_activation_swap_address" text, "base_pool_id" character varying, CONSTRAINT "PK_2d2a83e1e4ee59b5d7e139038ee" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "dlmm_pool" ("id" character varying NOT NULL, "bin_step" integer, "active_id" integer, "activation_point" numeric, "pre_activation_duration" numeric, "pre_activation_swap_address" text, "base_pool_id" character varying, CONSTRAINT "PK_2d2a83e1e4ee59b5d7e139038ee" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a3fa4326aadf455c3dbbc72980" ON "dlmm_pool" ("base_pool_id") `)
         await db.query(`ALTER TABLE "damm_liquidity_position" ADD CONSTRAINT "FK_61db474023f35025de0a0b57618" FOREIGN KEY ("pool_id") REFERENCES "damm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "damm_swap" ADD CONSTRAINT "FK_ecc1250c5dced930de1f4b12c34" FOREIGN KEY ("pool_id") REFERENCES "damm_pool"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
