@@ -193,7 +193,7 @@ export class DammProcessor {
             }
 
             const { accounts } = decoded
-            const { pool: poolAddress, user, aVault, bVault, aTokenVault, bTokenVault } = accounts
+            const { pool: poolAddress, user, aVault, bVault, aTokenVault, bTokenVault,userSourceToken,userDestinationToken } = accounts
 
             const missingParams = [
                 ['pool address', poolAddress],
@@ -201,7 +201,9 @@ export class DammProcessor {
                 ['A vault', aVault],
                 ['B vault', bVault],
                 ['vault A token', aTokenVault],
-                ['vault B token', bTokenVault]
+                ['vault B token', bTokenVault],
+                ['user source token', userSourceToken],
+                ['user destination token', userDestinationToken]
             ].filter(([name, value]) => !value)
              .map(([name]) => name)
 
@@ -214,10 +216,10 @@ export class DammProcessor {
 
             const basePool = await this.poolService.getOrCreateBasePool(
                 poolAddress,
+                userSourceToken,
+                userDestinationToken,
                 aTokenVault,
-                aTokenVault,
-                aTokenVault,
-                aTokenVault,
+                bTokenVault,
                 0n,
                 0n,
                 timestamp
